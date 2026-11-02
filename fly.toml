@@ -1,10 +1,10 @@
-# fly.toml app configuration file generated for chatgpt-2fa-suite on 2026-11-02T16:12:32+05:30
+# fly.toml app configuration file generated for chatgpt-master-suiet on 2026-11-02T11:09:12Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'chatgpt-2fa-suite'
-primary_region = 'sin'
+app = 'chatgpt-master-suiet'
+primary_region = 'ams'
 
 [build]
   dockerfile = 'Dockerfile'
@@ -14,7 +14,7 @@ primary_region = 'sin'
   PORT = '8888'
 
 [http_service]
-  internal_port = 8888
+  internal_port = 8080
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
