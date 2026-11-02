@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatGPT 2FA Master Suite | Professional Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #faf8ff;
+      --card-bg: #ffffff;
+      --card-border: #ede9fe;
+      --card-shadow: 0 10px 30px -5px rgba(109, 40, 217, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+      --purple-primary: #7c3aed;
+      --purple-hover: #6d28d9;
+      --purple-dark: #4c1d95;
+      --purple-light: #f5f3ff;
+      --purple-subtle: #ede9fe;
+      --purple-border: #ddd6fe;
+      --text-main: #1e1b4b;
+      --text-muted: #6b7280;
+      --text-dim: #9ca3af;
+      --success-green: #10b981;
+      --success-bg: #ecfdf5;
+      --error-red: #ef4444;
+      --error-bg: #fef2f2;
+      --input-bg: #fafafa;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(192, 132, 252, 0.08) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.25rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* Top Branding Header */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--purple-light);
+      border: 1px solid var(--purple-border);
+      color: var(--purple-primary);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.35rem 0.95rem;
+      border-radius: 9999px;
+      margin-bottom: 0.85rem;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--purple-primary);
+      box-shadow: 0 0 8px var(--purple-primary);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      font-weight: 500;
+    }
+
+    /* Navigation Tabs Bar */
+    .tabs-bar {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      background: #ffffff;
+      border: 1px solid var(--card-border);
+      padding: 0.45rem;
+      border-radius: 16px;
+      gap: 0.35rem;
+      box-shadow: 0 4px 20px -2px rgba(109, 40, 217, 0.05);
+      margin-bottom: 2rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.85rem 0.4rem;
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: center;
+    }
+
+    .tab-btn span.icon {
+      font-size: 1.2rem;
+    }
+
+    .tab-btn:hover {
+      color: var(--purple-primary);
+      background: var(--purple-light);
+    }
+
+    .tab-btn.active {
+      color: #ffffff;
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Card Panels */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 2.25rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .card-header {
+      margin-bottom: 1.75rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--purple-light);
+      padding-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 1.4rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      color: #111827;
+      padding: 0.9rem 1.1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus {
+      background: #ffffff;
+      border-color: var(--purple-primary);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+      line-height: 1.55;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.45rem;
+    }
+
+    /* Action Buttons */
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--purple-primary) 0%, var(--purple-hover) 100%);
+      color: #ffffff;
+      border: none;
+      padding: 0.95rem 1.5rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.28);
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, var(--purple-hover) 0%, var(--purple-dark) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      border: 1.5px solid var(--purple-border);
+      color: var(--purple-primary);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: var(--purple-light);
+      border-color: var(--purple-primary);
+      box-shadow: none;
+    }
+
+    /* Results */
+    .result-box {
+      margin-top: 1.75rem;
+      background: var(--success-bg);
+      border: 1.5px solid rgba(16, 185, 129, 0.4);
+      border-radius: 16px;
+      padding: 1.4rem;
+      display: none;
+      animation: fadeIn 0.3s;
+    }
+
+    .result-box.error {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: var(--error-bg);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.85rem;
+    }
+
+    .result-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #065f46;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .result-box.error .result-title {
+      color: #991b1b;
+    }
+
+    .copy-btn {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--purple-light);
+      border-color: var(--purple-border);
+      color: var(--purple-primary);
+    }
+
+    .secret-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--purple-dark);
+      letter-spacing: 0.05em;
+      word-break: break-all;
+      background: #ffffff;
+      padding: 1rem 1.2rem;
+      border-radius: 12px;
+      border: 1px solid var(--purple-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Live OTP Display (Tab 4) */
+    .otp-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.25rem 1rem;
+      background: linear-gradient(180deg, #fbfaff 0%, #f5f3ff 100%);
+      border-radius: 18px;
+      border: 1.5px solid var(--purple-border);
+      margin-top: 1.5rem;
+    }
+
+    .otp-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 3.8rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: var(--purple-primary);
+      text-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
+      margin-bottom: 0.85rem;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .otp-code:hover {
+      transform: scale(1.04);
+    }
+
+    .otp-timer-bar-wrap {
+      width: 320px;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 0.85rem;
+    }
+
+    .otp-timer-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+      border-radius: 999px;
+      transition: width 0.9s linear;
+    }
+
+    .otp-timer-text {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .qr-wrap {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      margin-top: 1.25rem;
+      background: #ffffff;
+      padding: 1.25rem;
+      border-radius: 14px;
+      border: 1px solid var(--purple-border);
+    }
+
+    .qr-img {
+      width: 120px;
+      height: 120px;
+      border-radius: 10px;
+      background: #fff;
+      padding: 6px;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* Session Login Cards (Tab 5) */
+    .session-info-card {
+      background: #ffffff;
+      border: 1.5px solid var(--purple-border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .session-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .session-item {
+      background: var(--purple-light);
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--purple-border);
+    }
+
+    .session-item-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .session-item-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--purple-dark);
+      word-break: break-all;
+    }
+
+    .bookmarklet-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 0.85rem 1.4rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+      cursor: move;
+      transition: all 0.2s;
+    }
+
+    .bookmarklet-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
+    }
+
+    /* Job History Table (Tab 6) */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #ffffff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    thead {
+      background: var(--purple-light);
+      border-bottom: 1.5px solid var(--purple-border);
+    }
+
+    th {
+      padding: 0.9rem 1rem;
+      font-weight: 700;
+      color: var(--purple-dark);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid #f3f4f6;
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background: #faf5ff;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-success {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+
+    .badge-failed {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #1e1b4b;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.92rem;
+      padding: 0.85rem 1.4rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 1000;
+      border-left: 4px solid var(--purple-primary);
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .tabs-bar {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .session-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 580px) {
+      .tabs-bar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      h1 {
+        font-size: 1.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Branding -->
+    <header>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        ChatGPT 2FA Operations
+      </div>
+      <h1>2FA <span>Master Suite</span></h1>
+      <p class="subtitle">Classic & professional suite for ChatGPT Multi-Factor Authentication & Browser Login</p>
+      
+      <!-- Telegram Support & Community Bar -->
+      <div style="display:flex; justify-content:center; align-items:center; gap:0.75rem; margin-top:0.85rem; flex-wrap:wrap;">
+        <a href="https://t.me/sellerxdddd" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:6px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding:5px 14px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; transition:all 0.2s; box-shadow:0 2px 6px rgba(29,78,216,0.08);">
+          <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+          <span>Support: <b>@sellerxdddd</b></span>
+        </a>
+        <a href="https://t.me/+BAk4RH04qWBkNjll" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:6px; background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; padding:5px 14px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; transition:all 0.2s; box-shadow:0 2px 6px rgba(109,40,217,0.08);">
+          <svg style="width:14px; height:14px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+          <span>Join Telegram Group</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs (6 Tabs) -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab('tab-setup')">
+        <span class="icon">✨</span>
+        <span>1. Setup 2FA</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-fast-login')">
+        <span class="icon">⚡</span>
+        <span>2. Fast Login</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-cred')">
+        <span class="icon">🔄</span>
+        <span>3. Change Creds</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-session-rotate')">
+        <span class="icon">🛡️</span>
+        <span>4. Rotate 2FA</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-live-otp')">
+        <span class="icon">⏱️</span>
+        <span>5. Live OTP</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-history')">
+        <span class="icon">📜</span>
+        <span>6. History</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: Setup 2FA via Session -->
+    <div id="tab-setup" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">✨ Setup 2FA from Active Session</div>
+            <div class="card-desc">For accounts currently logged into the browser without 2FA. Enrolls and activates a fresh 2FA secret instantly.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Paste Access Token or Full Session JSON:</label>
+          <textarea id="setup-session-input" placeholder='Paste your accessToken ("eyJhbGciOiJSUz...") or the full JSON copied from https://chatgpt.com/api/auth/session'></textarea>
+          <div class="hint">Accepts raw JWT token or full session JSON payload from <code>chatgpt.com/api/auth/session</code>.</div>
+        </div>
+
+        <div class="form-group">
+          <label>Proxy (Optional):</label>
+          <input type="text" id="setup-proxy-input" placeholder="http://user:pass@ip:port (Leave blank for direct connection)">
+        </div>
+
+        <button class="btn" id="setup-btn" onclick="runSetup2fa()">
+          <span>🚀 Enroll & Activate New 2FA</span>
+        </button>
+
+        <div class="result-box" id="setup-result">
+          <div class="result-header">
+            <span class="result-title" id="setup-result-title">✅ Success</span>
+            <button class="copy-btn" onclick="copySetupSecret()">Copy Secret</button>
+          </div>
+          <div class="secret-display" id="setup-secret-text">---</div>
+          <div class="qr-wrap" id="setup-qr-wrap" style="display:none;">
+            <img class="qr-img" id="setup-qr-img" alt="Scan QR">
+            <div>
+              <div style="font-weight:700; margin-bottom:0.25rem;">Scan in Authenticator App</div>
+              <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">Scan directly with Google Authenticator or Microsoft Authenticator.</div>
+              <button class="copy-btn" onclick="sendToLiveOtp(currentSetupSecret)">Open in Tab 5 (Live OTP)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Fast Login (mail|pass|2fa in seconds) -->
+    <div id="tab-fast-login" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">⚡ Fast Login (mail|pass|2fa)</div>
+            <div class="card-desc">Instant authentication via ChatGPT OAuth pipeline in 2–4 seconds. Generates active Access Token, Session Token & full session JSON.</div>
+          </div>
+          <div>
+            <span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:4px 10px; border-radius:20px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Fast TLS Emulation
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Account Line (Single Line: email|password|2fa_secret):</label>
+          <input type="text" id="fast-account-input" placeholder="user@gmail.com|MyPassword123|JBSWY3DPEHPK3PXP" oninput="handleFastLoginInput(this.value)">
+          <div class="hint">Paste <code>email|password|2fa_secret</code> in one go, or fill individual fields below.</div>
+        </div>
+
+        <!-- Optional 3 split fields for convenience -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+          <div>
+            <label style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">Email:</label>
+            <input type="text" id="fast-email-field" placeholder="user@gmail.com" oninput="syncFastFields()">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">Password:</label>
+            <input type="text" id="fast-pass-field" placeholder="Password" oninput="syncFastFields()">
+          </div>
+          <div>
+            <label style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">2FA Secret:</label>
+            <input type="text" id="fast-totp-field" placeholder="2FA Secret (TOTP)" oninput="syncFastFields()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Proxy (Optional):</label>
+          <input type="text" id="fast-proxy-input" placeholder="http://user:pass@ip:port">
+        </div>
+
+        <button class="btn" id="fast-login-btn" onclick="runFastLogin()" style="background:linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); box-shadow:0 4px 14px rgba(124,58,237,0.3);">
+          <span>⚡ Fast Login (Authenticate in Seconds)</span>
+        </button>
+
+        <!-- Result Box -->
+        <div class="result-box" id="fast-result">
+          <div class="result-header">
+            <span class="result-title" id="fast-result-title">🎉 Login Successful!</span>
+            <span id="fast-elapsed-badge" style="background:#f3e8ff; color:#6b21a8; padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">---</span>
+          </div>
+
+          <!-- Account badges -->
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.6rem; margin-bottom:0.85rem;">
+            <span id="fast-email-badge" style="background:#ede9fe; color:#5b21b6; padding:4px 10px; border-radius:6px; font-size:0.82rem; font-weight:600; font-family:'JetBrains Mono';"></span>
+            <span id="fast-plan-badge" style="background:#e0e7ff; color:#3730a3; padding:4px 10px; border-radius:6px; font-size:0.82rem; font-weight:700; text-transform:uppercase;"></span>
+            <span id="fast-name-badge" style="background:#fdf2f8; color:#9d174d; padding:4px 10px; border-radius:6px; font-size:0.82rem; font-weight:600; display:none;"></span>
+            <span id="fast-expires-badge" style="background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:6px; font-size:0.82rem; font-weight:600; display:none;"></span>
+            <span id="fast-did-badge" style="background:#f1f5f9; color:#475569; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-family:'JetBrains Mono';"></span>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+            <button class="copy-btn" onclick="copyFastToken('access')">📋 Copy Access Token</button>
+            <button class="copy-btn" onclick="copyFastToken('session')">🍪 Copy Session Token</button>
+            <button class="copy-btn" onclick="copyFastToken('json')">📦 Copy Full Session JSON</button>
+            <button class="copy-btn" onclick="copyFastToken('line')">📎 Copy email|pass|2fa</button>
+          </div>
+
+          <!-- Full JSON preview / collapsible -->
+          <details open style="background:#ffffff; border:1px solid var(--purple-border); border-radius:8px; padding:0.6rem 0.8rem; font-size:0.82rem;">
+            <summary style="cursor:pointer; font-weight:600; color:var(--purple-dark);">📦 Full Session JSON (/api/auth/session payload)</summary>
+            <pre id="fast-json-preview" style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:6px; padding:0.75rem; margin-top:0.6rem; font-size:0.75rem; max-height:220px; overflow-y:auto; word-break:break-all; white-space:pre-wrap; font-family:'JetBrains Mono';"></pre>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Change 2FA via Email + Password + Current 2FA -->
+    <div id="tab-cred" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🔄 Change 2FA via Email, Password & Current 2FA</div>
+            <div class="card-desc">Full login & rotation: Logs in using current credentials and 2FA, disables old factor, enrolls new secret, and verifies.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Account Line (Format: email|password|current_2fa):</label>
+          <input type="text" id="cred-account-input" placeholder="user@gmail.com|MySecretPass123|JBSWY3DPEHPK3PXP">
+          <div class="hint">Format must be email|password|current_totp separated by vertical bars (|).</div>
+        </div>
+
+        <div class="form-group">
+          <label>Proxy (Optional):</label>
+          <input type="text" id="cred-proxy-input" placeholder="http://user:pass@ip:port">
+        </div>
+
+        <button class="btn" id="cred-btn" onclick="runCredRotate()">
+          <span>🔄 Rotate 2FA & Verify New Login</span>
+        </button>
+
+        <div class="result-box" id="cred-result">
+          <div class="result-header">
+            <span class="result-title" id="cred-result-title">✅ Account Rotated</span>
+            <button class="copy-btn" onclick="copyCredLine()">Copy Full Line</button>
+          </div>
+          <div class="secret-display" id="cred-line-text" style="font-size:0.95rem;">---</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Change 2FA via Session -->
+    <div id="tab-session-rotate" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">⚡ Change / Rotate 2FA via Active Session</div>
+            <div class="card-desc">For accounts with active browser sessions. Replaces an existing factor with a brand-new secret.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Paste Access Token or Full Session JSON:</label>
+          <textarea id="rotate-session-input" placeholder='Paste your accessToken ("eyJhbGciOiJSUz...") or the full JSON from https://chatgpt.com/api/auth/session'></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Proxy (Optional):</label>
+          <input type="text" id="rotate-proxy-input" placeholder="http://user:pass@ip:port">
+        </div>
+
+        <button class="btn" id="rotate-btn" onclick="runSessionRotate()">
+          <span>⚡ Replace Old 2FA with New Secret</span>
+        </button>
+
+        <div class="result-box" id="rotate-result">
+          <div class="result-header">
+            <span class="result-title" id="rotate-result-title">✅ 2FA Replaced</span>
+            <button class="copy-btn" onclick="copyRotateSecret()">Copy Secret</button>
+          </div>
+          <div class="secret-display" id="rotate-secret-text">---</div>
+          <div class="qr-wrap" id="rotate-qr-wrap" style="display:none;">
+            <img class="qr-img" id="rotate-qr-img" alt="Scan QR">
+            <div>
+              <div style="font-weight:700; margin-bottom:0.25rem;">Scan in Google Authenticator</div>
+              <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem;">Add this new secret to your Authenticator app.</div>
+              <button class="copy-btn" onclick="sendToLiveOtp(currentRotateSecret)">Open in Tab 5 (Live OTP)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: Live OTP Authenticator -->
+    <div id="tab-live-otp" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">⏱️ Live 2FA Authenticator & OTP Generator</div>
+            <div class="card-desc">Generate real-time 6-digit login codes from any 2FA secret with interactive 30s countdown.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>2FA Secret Key (Base32):</label>
+          <input type="text" id="live-secret-input" placeholder="e.g. A3JFMZLWVKMT7OQT7OQQ3O3ACEK4R5XW" oninput="updateLiveOtp()">
+          <div class="hint">Paste your secret key here. Codes recalculate automatically every 30 seconds.</div>
+        </div>
+
+        <div class="otp-stage" id="otp-stage" style="display:none;">
+          <div class="otp-code" id="otp-code-val" title="Click to copy" onclick="copyOtpCode()">000 000</div>
+          <div class="otp-timer-bar-wrap">
+            <div class="otp-timer-bar" id="otp-progress"></div>
+          </div>
+          <div class="otp-timer-text" id="otp-timer-lbl">30s remaining</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: Job History -->
+    <div id="tab-history" class="tab-content">
+      <div class="card">
+        <div class="card-header" style="flex-wrap:wrap; gap:1rem;">
+          <div>
+            <div class="card-title">📜 Operations & Job History</div>
+            <div class="card-desc">Central audit log of all operations performed across all accounts by any user.</div>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button class="copy-btn" onclick="copyAllSuccessfulAccounts()" style="background:#059669; color:#fff; border-color:#059669; font-weight:700;">📋 Copy All Successful</button>
+            <button class="copy-btn" onclick="downloadSuccessfulFile()" style="background:#4f46e5; color:#fff; border-color:#4f46e5;">📥 Download .txt</button>
+            <button class="copy-btn" onclick="loadHistory()">🔄 Refresh</button>
+            <button class="copy-btn" style="color:var(--error-red);" onclick="clearHistory()">🗑️ Clear History</button>
+          </div>
+        </div>
+
+        <!-- Stats Chips & Filter Bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.75rem 1rem; margin-bottom:1rem;">
+          <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted);">FILTER:</span>
+            <button class="tab-btn active" id="filter-all-btn" onclick="setHistoryFilter('ALL')" style="padding:4px 12px; font-size:0.78rem; border-radius:20px;">All Jobs</button>
+            <button class="tab-btn" id="filter-success-btn" onclick="setHistoryFilter('SUCCESS')" style="padding:4px 12px; font-size:0.78rem; border-radius:20px; color:#059669;">✅ Successful Only</button>
+            <button class="tab-btn" id="filter-failed-btn" onclick="setHistoryFilter('FAILED')" style="padding:4px 12px; font-size:0.78rem; border-radius:20px; color:#dc2626;">❌ Failed Only</button>
+          </div>
+
+          <div style="display:flex; gap:0.75rem; align-items:center;">
+            <span style="background:#ede9fe; color:#5b21b6; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:12px;">Total: <b id="hist-stat-total">0</b></span>
+            <span style="background:#dcfce7; color:#15803d; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:12px;">Success: <b id="hist-stat-success">0</b></span>
+            <span style="background:#fee2e2; color:#991b1b; font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:12px;">Failed: <b id="hist-stat-failed">0</b></span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Operation</th>
+                <th>Account</th>
+                <th>Status</th>
+                <th>Result / Details</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <tr>
+                <td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading history...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Support & Community -->
+    <footer style="margin-top:2.5rem; padding-top:1.5rem; border-top:1px solid #e2e8f0; text-align:center; font-size:0.84rem; color:var(--text-muted); display:flex; justify-content:center; align-items:center; gap:1.25rem; flex-wrap:wrap;">
+      <div>💬 Telegram Support: <a href="https://t.me/sellerxdddd" target="_blank" rel="noopener noreferrer" style="color:#2563eb; font-weight:700; text-decoration:none;">@sellerxdddd</a></div>
+      <span style="color:#cbd5e1;">•</span>
+      <div>📢 Telegram Community: <a href="https://t.me/+BAk4RH04qWBkNjll" target="_blank" rel="noopener noreferrer" style="color:#7c3aed; font-weight:700; text-decoration:none;">Join Telegram Group</a></div>
+    </footer>
+  </div>
+
+  <div id="toast">Copied to clipboard!</div>
+
+  <script>
+    let currentSetupSecret = "";
+    let currentRotateSecret = "";
+    let currentCredLine = "";
+    let fastLoginData = {
+      accessToken: "",
+      sessionToken: "",
+      sessionPayload: null,
+      accountLine: "",
+      deviceId: "",
+      email: ""
+    };
+
+    function showToast(msg = "Copied to clipboard!") {
+      const t = document.getElementById("toast");
+      t.innerText = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2200);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      
+      const tabIds = ["tab-setup", "tab-fast-login", "tab-cred", "tab-session-rotate", "tab-live-otp", "tab-history"];
+      const idx = tabIds.indexOf(tabId);
+      if (idx !== -1) {
+        document.querySelectorAll(".tab-btn")[idx].classList.add("active");
+      }
+      document.getElementById(tabId).classList.add("active");
+
+      if (tabId === "tab-history") {
+        loadHistory();
+      }
+    }
+
+    /* Tab 2: Fast Login Helpers */
+    function handleFastLoginInput(val) {
+      if (val.includes("|")) {
+        const parts = val.split("|");
+        if (parts.length >= 1) document.getElementById("fast-email-field").value = parts[0].trim();
+        if (parts.length >= 2) document.getElementById("fast-pass-field").value = parts[1].trim();
+        if (parts.length >= 3) document.getElementById("fast-totp-field").value = parts[2].trim();
+      }
+    }
+
+    function syncFastFields() {
+      const em = document.getElementById("fast-email-field").value.trim();
+      const pw = document.getElementById("fast-pass-field").value.trim();
+      const tp = document.getElementById("fast-totp-field").value.trim();
+      if (em || pw || tp) {
+        document.getElementById("fast-account-input").value = `${em}|${pw}|${tp}`;
+      }
+    }
+
+    async function runFastLogin() {
+      const line = document.getElementById("fast-account-input").value.trim();
+      const proxy = document.getElementById("fast-proxy-input").value.trim() || null;
+      const btn = document.getElementById("fast-login-btn");
+      const resBox = document.getElementById("fast-result");
+      const title = document.getElementById("fast-result-title");
+      const badgeElapsed = document.getElementById("fast-elapsed-badge");
+      const badgeEmail = document.getElementById("fast-email-badge");
+      const badgePlan = document.getElementById("fast-plan-badge");
+      const badgeName = document.getElementById("fast-name-badge");
+      const badgeExpires = document.getElementById("fast-expires-badge");
+      const badgeDid = document.getElementById("fast-did-badge");
+      const jsonPreview = document.getElementById("fast-json-preview");
+
+      if (!line || line.split("|").length < 3) {
+        return alert("Please enter account in format: email|password|2fa_secret");
+      }
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Authenticating in background (solving POW + MFA)...";
+      resBox.style.display = "none";
+      resBox.classList.remove("error");
+
+      const t0 = performance.now();
+      try {
+        const resp = await fetch("/api/fast_login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ account_line: line, proxy })
+        });
+        const data = await resp.json();
+        const clientElapsed = ((performance.now() - t0) / 1000).toFixed(2);
+
+        resBox.style.display = "block";
+        if (data.ok) {
+          fastLoginData.accessToken = data.access_token || "";
+          fastLoginData.sessionToken = data.session_token || "";
+          fastLoginData.sessionPayload = data.session_payload || {};
+          fastLoginData.accountLine = data.account_line || line;
+          fastLoginData.deviceId = data.device_id || "";
+          fastLoginData.email = data.email || "";
+
+          title.innerText = `🎉 Logged In Successfully!`;
+          badgeElapsed.innerText = `⚡ ${data.elapsed_seconds || clientElapsed}s`;
+          badgeEmail.innerText = data.email || "Account";
+          
+          const plan = (data.plan_type || "free").toUpperCase();
+          badgePlan.innerText = `PLAN: ${plan}`;
+          if (plan === "FREE") {
+            badgePlan.style.background = "#e0e7ff";
+            badgePlan.style.color = "#3730a3";
+            badgePlan.style.border = "1px solid #c7d2fe";
+          } else {
+            badgePlan.style.background = "#dcfce7";
+            badgePlan.style.color = "#15803d";
+            badgePlan.style.border = "1px solid #86efac";
+          }
+
+          if (data.name) {
+            badgeName.innerText = `👤 ${data.name}`;
+            badgeName.style.display = "inline-block";
+          } else {
+            badgeName.style.display = "none";
+          }
+
+          if (data.expires) {
+            const expDate = data.expires.split("T")[0];
+            badgeExpires.innerText = `📅 Exp: ${expDate}`;
+            badgeExpires.style.display = "inline-block";
+          } else {
+            badgeExpires.style.display = "none";
+          }
+
+          badgeDid.innerText = data.device_id ? `DID: ${data.device_id.substring(0, 14)}...` : "";
+          badgeDid.style.display = data.device_id ? "inline-block" : "none";
+
+          jsonPreview.innerText = JSON.stringify(data.session_payload || {}, null, 2);
+          showToast(`Logged in in ${data.elapsed_seconds || clientElapsed}s!`);
+        } else {
+          resBox.classList.add("error");
+          title.innerText = "❌ Fast Login Failed";
+          badgeElapsed.innerText = `⏱️ ${data.elapsed_seconds || clientElapsed}s`;
+          badgeEmail.innerText = line.split("|")[0];
+          badgePlan.innerText = "FAILED";
+          badgePlan.style.background = "#fee2e2";
+          badgePlan.style.color = "#991b1b";
+          badgePlan.style.border = "1px solid #fca5a5";
+          badgeName.style.display = "none";
+          badgeExpires.style.display = "none";
+          badgeDid.style.display = "none";
+          jsonPreview.innerText = data.error || "Authentication failed. Check credentials/2FA.";
+        }
+      } catch (err) {
+        resBox.style.display = "block";
+        resBox.classList.add("error");
+        title.innerText = "❌ Network / Server Error";
+        badgeElapsed.innerText = "ERR";
+        jsonPreview.innerText = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "⚡ Fast Login (Authenticate in Seconds)";
+      }
+    }
+
+    function copyFastToken(type) {
+      let text = "";
+      if (type === "access") text = fastLoginData.accessToken;
+      else if (type === "session") text = fastLoginData.sessionToken;
+      else if (type === "json") text = JSON.stringify(fastLoginData.sessionPayload || {}, null, 2);
+      else if (type === "line") text = fastLoginData.accountLine;
+
+      if (!text) return alert("No data available to copy yet.");
+      navigator.clipboard.writeText(text);
+      showToast("Copied to clipboard!");
+    }
+
+    /* Tab 1: Setup via Session */
+    async function runSetup2fa() {
+      const input = document.getElementById("setup-session-input").value.trim();
+      const proxy = document.getElementById("setup-proxy-input").value.trim() || null;
+      const btn = document.getElementById("setup-btn");
+      const resBox = document.getElementById("setup-result");
+      const title = document.getElementById("setup-result-title");
+      const secText = document.getElementById("setup-secret-text");
+      const qrWrap = document.getElementById("setup-qr-wrap");
+      const qrImg = document.getElementById("setup-qr-img");
+
+      if (!input) return alert("Please paste an active session token or JSON!");
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Enrolling with ChatGPT...";
+      resBox.style.display = "none";
+      resBox.classList.remove("error");
+
+      try {
+        const resp = await fetch("/api/session/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_data: input, proxy })
+        });
+        const data = await resp.json();
+
+        resBox.style.display = "block";
+        if (data.ok) {
+          currentSetupSecret = data.secret;
+          title.innerText = "🎉 2FA Enrolled & Active!";
+          secText.innerText = data.secret;
+          qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('otpauth://totp/ChatGPT?secret=' + data.secret)}`;
+          qrWrap.style.display = "flex";
+        } else {
+          resBox.classList.add("error");
+          title.innerText = data.already_enabled ? "⚠️ 2FA Already Assigned" : "❌ Setup Failed";
+          if (data.already_enabled) {
+            secText.innerHTML = `<span>2FA is already enabled on this account. Use <b>Tab 4: Rotate 2FA</b>.</span><div style="margin-top:0.75rem;"><button class="copy-btn" onclick="switchTab('tab-session-rotate')" style="background:#7c3aed; color:#fff; border:none; padding:6px 14px; font-weight:700; border-radius:6px; cursor:pointer;">🛡️ Open Tab 4: Rotate 2FA ➡️</button></div>`;
+          } else {
+            secText.innerText = data.message || data.error || "Unknown error";
+          }
+          qrWrap.style.display = "none";
+        }
+      } catch (err) {
+        resBox.style.display = "block";
+        resBox.classList.add("error");
+        title.innerText = "❌ Network Error";
+        secText.innerText = err.message;
+        qrWrap.style.display = "none";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🚀 Enroll & Activate New 2FA";
+      }
+    }
+
+    function copySetupSecret() {
+      if (!currentSetupSecret) return;
+      navigator.clipboard.writeText(currentSetupSecret);
+      showToast("Secret key copied!");
+    }
+
+    /* Tab 2: Change via Credentials */
+    async function runCredRotate() {
+      const line = document.getElementById("cred-account-input").value.trim();
+      const proxy = document.getElementById("cred-proxy-input").value.trim() || null;
+      const btn = document.getElementById("cred-btn");
+      const resBox = document.getElementById("cred-result");
+      const title = document.getElementById("cred-result-title");
+      const lineText = document.getElementById("cred-line-text");
+
+      if (!line) return alert("Please enter email|password|current_2fa!");
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Logging in & Rotating 2FA...";
+      resBox.style.display = "none";
+      resBox.classList.remove("error");
+
+      try {
+        const resp = await fetch("/api/credentials/rotate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ account_line: line, proxy })
+        });
+        const data = await resp.json();
+
+        resBox.style.display = "block";
+        if (data.ok) {
+          currentCredLine = data.output_line;
+          title.innerText = "✅ Account Rotated";
+          lineText.innerText = data.output_line;
+        } else {
+          resBox.classList.add("error");
+          title.innerText = "❌ Rotation Failed";
+          lineText.innerText = data.error || "Unknown error";
+        }
+      } catch (err) {
+        resBox.style.display = "block";
+        resBox.classList.add("error");
+        title.innerText = "❌ Error";
+        lineText.innerText = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🔄 Rotate 2FA & Verify New Login";
+      }
+    }
+
+    function copyCredLine() {
+      if (!currentCredLine) return;
+      navigator.clipboard.writeText(currentCredLine);
+      showToast("Account line copied!");
+    }
+
+    /* Tab 3: Change via Session */
+    async function runSessionRotate() {
+      const input = document.getElementById("rotate-session-input").value.trim();
+      const proxy = document.getElementById("rotate-proxy-input").value.trim() || null;
+      const btn = document.getElementById("rotate-btn");
+      const resBox = document.getElementById("rotate-result");
+      const title = document.getElementById("rotate-result-title");
+      const secText = document.getElementById("rotate-secret-text");
+      const qrWrap = document.getElementById("rotate-qr-wrap");
+      const qrImg = document.getElementById("rotate-qr-img");
+
+      if (!input) return alert("Please paste an active session token or JSON!");
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Disabling old 2FA & activating new one...";
+      resBox.style.display = "none";
+      resBox.classList.remove("error");
+
+      try {
+        const resp = await fetch("/api/session/rotate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_data: input, proxy })
+        });
+        const data = await resp.json();
+
+        resBox.style.display = "block";
+        if (data.ok) {
+          currentRotateSecret = data.secret;
+          title.innerText = "🎉 2FA Replaced & Active!";
+          secText.innerText = data.secret;
+          qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('otpauth://totp/ChatGPT?secret=' + data.secret)}`;
+          qrWrap.style.display = "flex";
+        } else {
+          resBox.classList.add("error");
+          title.innerText = "❌ Rotation Failed";
+          secText.innerText = data.message || data.error || "Unknown error";
+          qrWrap.style.display = "none";
+        }
+      } catch (err) {
+        resBox.style.display = "block";
+        resBox.classList.add("error");
+        title.innerText = "❌ Network Error";
+        secText.innerText = err.message;
+        qrWrap.style.display = "none";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "⚡ Replace Old 2FA with New Secret";
+      }
+    }
+
+    function copyRotateSecret() {
+      if (!currentRotateSecret) return;
+      navigator.clipboard.writeText(currentRotateSecret);
+      showToast("New secret copied!");
+    }
+
+    function sendToLiveOtp(secret) {
+      if (!secret) return;
+      document.getElementById("live-secret-input").value = secret;
+      switchTab("tab-live-otp");
+      updateLiveOtp();
+    }
+
+    /* Tab 4: Live OTP Authenticator (Client-side RFC 6238 implementation) */
+    function b32decode(str) {
+      const a = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+      let bits = "";
+      for (const c of str.toUpperCase().replace(/=+$/, "")) {
+        const idx = a.indexOf(c);
+        if (idx !== -1) bits += idx.toString(2).padStart(5, "0");
+      }
+      const bytes = [];
+      for (let i = 0; i + 8 <= bits.length; i += 8) {
+        bytes.push(parseInt(bits.substring(i, i + 8), 2));
+      }
+      return new Uint8Array(bytes);
+    }
+
+    async function computeTotp(secretB32) {
+      try {
+        const key = await crypto.subtle.importKey(
+          "raw", b32decode(secretB32), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
+        );
+        const counter = Math.floor(Date.now() / 1000 / 30);
+        const buf = new ArrayBuffer(8);
+        new DataView(buf).setBigUint64(0, BigInt(counter));
+        const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, buf));
+        const offset = sig[sig.length - 1] & 0x0f;
+        const binary = ((sig[offset] & 0x7f) << 24) | ((sig[offset + 1] & 0xff) << 16) |
+                       ((sig[offset + 2] & 0xff) << 8) | (sig[offset + 3] & 0xff);
+        const otp = (binary % 1000000).toString().padStart(6, "0");
+        return otp.slice(0, 3) + " " + otp.slice(3);
+      } catch (e) {
+        return "------";
+      }
+    }
+
+    async function updateLiveOtp() {
+      const raw = document.getElementById("live-secret-input").value.trim().replace(/\s+/g, "").toUpperCase();
+      const stage = document.getElementById("otp-stage");
+      const codeVal = document.getElementById("otp-code-val");
+      const progress = document.getElementById("otp-progress");
+      const timerLbl = document.getElementById("otp-timer-lbl");
+
+      if (!raw || raw.length < 8) {
+        stage.style.display = "none";
+        return;
+      }
+
+      stage.style.display = "flex";
+      const code = await computeTotp(raw);
+      codeVal.innerText = code;
+
+      const epoch = Math.floor(Date.now() / 1000);
+      const remaining = 30 - (epoch % 30);
+      const pct = (remaining / 30) * 100;
+      progress.style.width = pct + "%";
+      timerLbl.innerText = `${remaining}s remaining`;
+    }
+
+    function copyOtpCode() {
+      const code = document.getElementById("otp-code-val").innerText.replace(/\s+/g, "");
+      if (code && code !== "------") {
+        navigator.clipboard.writeText(code);
+        showToast("OTP code " + code + " copied!");
+      }
+    }
+
+    setInterval(() => {
+      const sec = document.getElementById("live-secret-input").value.trim();
+      if (sec) updateLiveOtp();
+    }, 1000);
+
+    /* Tab 6: Job History */
+    let currentHistoryFilter = "ALL";
+    let cachedJobs = [];
+
+    async function setHistoryFilter(filter) {
+      currentHistoryFilter = filter;
+      document.getElementById("filter-all-btn").classList.toggle("active", filter === "ALL");
+      document.getElementById("filter-success-btn").classList.toggle("active", filter === "SUCCESS");
+      document.getElementById("filter-failed-btn").classList.toggle("active", filter === "FAILED");
+      loadHistory();
+    }
+
+    async function loadHistory() {
+      const tbody = document.getElementById("history-table-body");
+      try {
+        const url = currentHistoryFilter === "ALL" ? "/api/history" : `/api/history?status=${currentHistoryFilter}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        
+        cachedJobs = data.jobs || [];
+        if (data.stats) {
+          document.getElementById("hist-stat-total").innerText = data.stats.total;
+          document.getElementById("hist-stat-success").innerText = data.stats.success;
+          document.getElementById("hist-stat-failed").innerText = data.stats.failed;
+        }
+
+        if (cachedJobs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">No ${currentHistoryFilter !== "ALL" ? currentHistoryFilter.toLowerCase() : ""} jobs recorded yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = cachedJobs.map(j => {
+          const isOk = j.status === "SUCCESS";
+          const badgeClass = isOk ? "badge-success" : "badge-failed";
+          const resDisplay = j.result || j.error || "---";
+          const copyVal = j.result || j.error || "";
+          return `
+            <tr>
+              <td style="font-weight:700; color:var(--purple-dark); font-family:'JetBrains Mono';">#${j.id}</td>
+              <td style="color:var(--text-muted); font-size:0.8rem; white-space:nowrap;">${j.timestamp}</td>
+              <td style="font-weight:600;">${j.action}</td>
+              <td style="font-family:'JetBrains Mono'; font-size:0.82rem; color:var(--text-main); font-weight:600;">${j.account}</td>
+              <td><span class="badge-status ${badgeClass}">${j.status}</span></td>
+              <td style="font-family:'JetBrains Mono'; font-size:0.8rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${resDisplay.replace(/"/g, '&quot;')}">${resDisplay}</td>
+              <td>
+                ${copyVal ? `<button class="copy-btn" onclick="navigator.clipboard.writeText('${copyVal.replace(/'/g, "\'")}'); showToast('Copied!');">Copy</button>` : ''}
+              </td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--error-red);">Failed to load history: ${err.message}</td></tr>`;
+      }
+    }
+
+    async function copyAllSuccessfulAccounts() {
+      try {
+        const resp = await fetch("/api/history?status=SUCCESS");
+        const data = await resp.json();
+        const successJobs = data.jobs || [];
+        if (successJobs.length === 0) {
+          return alert("No successful jobs found to copy.");
+        }
+        const lines = successJobs.map(j => {
+          const res = (j.result || "").trim();
+          const acc = (j.account || "").trim();
+          if (res.includes("|") && !res.includes("Plan:")) return res;
+          return `${acc} | ${res}`;
+        });
+        navigator.clipboard.writeText(lines.join("\n"));
+        showToast(`Copied ${lines.length} successful accounts to clipboard!`);
+      } catch (err) {
+        alert("Failed to copy accounts: " + err.message);
+      }
+    }
+
+    function downloadSuccessfulFile() {
+      window.open("/api/history/export", "_blank");
+    }
+
+    async function clearHistory() {
+      if (!confirm("Are you sure you want to clear all job history?")) return;
+      try {
+        await fetch("/api/history/clear", { method: "POST" });
+        loadHistory();
+        showToast("History cleared!");
+      } catch (err) {
+        alert("Failed to clear history: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

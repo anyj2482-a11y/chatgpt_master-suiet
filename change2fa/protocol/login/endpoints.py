@@ -1,0 +1,26 @@
+CHATGPT_BASE = "https://chatgpt.com"
+AUTH_BASE = "https://auth.openai.com"
+URL_AUTH_LOGIN = f"{CHATGPT_BASE}/auth/login"
+URL_LOGIN_WITH = f"{CHATGPT_BASE}/auth/login_with"
+URL_CSRF = f"{CHATGPT_BASE}/api/auth/csrf"
+URL_PROVIDERS = f"{CHATGPT_BASE}/api/auth/providers"
+URL_SIGNIN_OPENAI = f"{CHATGPT_BASE}/api/auth/signin/openai"
+URL_SESSION = f"{CHATGPT_BASE}/api/auth/session"
+URL_ME = f"{CHATGPT_BASE}/backend-api/me"
+URL_AUTHORIZE_CONTINUE = f"{AUTH_BASE}/api/accounts/authorize/continue"
+URL_PASSWORD_VERIFY = f"{AUTH_BASE}/api/accounts/password/verify"
+URL_MFA_ISSUE = f"{AUTH_BASE}/api/accounts/mfa/issue_challenge"
+URL_MFA_VERIFY = f"{AUTH_BASE}/api/accounts/mfa/verify"
+URL_EMAIL_OTP_SEND = f"{AUTH_BASE}/api/accounts/email-otp/send"
+URL_EMAIL_OTP_VALIDATE = f"{AUTH_BASE}/api/accounts/email-otp/validate"
+URL_ENTITLEMENT = (
+    f"{CHATGPT_BASE}/backend-api/accounts/check/v4-2023-04-27"
+    "?timezone_offset_min=-420"
+)
+URL_OFFER = (
+    f"{CHATGPT_BASE}/backend-api/promo_campaign/check_coupon"
+    "?coupon=plus-1-month-free&is_coupon_from_query_param=true"
+)
+OAI_CLIENT_VERSION = "prod-fb4a8a2a751dfec391053cfd7b01c52699ccf78c"
+OAI_CLIENT_BUILD_NUMBER = "8370486"
+COOKIE_SESSION = "__Secure-next-auth.session-token"

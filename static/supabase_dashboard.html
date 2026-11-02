@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Cloud Live Operations & History</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    /* ==========================================================================
+       LICENSE & TIME-LOCK SYSTEM ($2.50 / 30 DAYS ACCESS)
+       ========================================================================== */
+    const STORAGE_KEY_PASS = "dashboard_license_key";
+    const STORAGE_KEY_EXPIRES = "dashboard_license_expires_at";
+    const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000; // 30 Days in ms
+
+    // Built-in Admin & Master Keys
+    const MASTER_KEYS = [
+      "ADMIN-MASTER-PASS-2026",
+      "VIP-LIFETIME-ACCESS",
+      "SELLERXDDDD-PASS",
+      "ANUJ-SUPER-ADMIN"
+    ];
+
+    function checkLicenseState() {
+      const overlay = document.getElementById("lock-overlay");
+      const timerText = document.getElementById("license-timer-text");
+      const storedKey = localStorage.getItem(STORAGE_KEY_PASS);
+      const storedExpires = localStorage.getItem(STORAGE_KEY_EXPIRES);
+
+      if (!storedKey || !storedExpires) {
+        overlay.style.display = "flex";
+        return false;
+      }
+
+      // Check Master Key
+      if (MASTER_KEYS.includes(storedKey.trim().toUpperCase())) {
+        overlay.style.display = "none";
+        if (timerText) timerText.innerText = "LIFETIME (Admin)";
+        return true;
+      }
+
+      const expiresTime = parseInt(storedExpires, 10);
+      const now = Date.now();
+
+      if (isNaN(expiresTime) || now >= expiresTime) {
+        // Expired!
+        overlay.style.display = "flex";
+        const err = document.getElementById("license-error-msg");
+        if (err) {
+          err.innerText = "❌ Your 30-day subscription has expired. Please renew for $2.50.";
+          err.style.display = "block";
+        }
+        localStorage.removeItem(STORAGE_KEY_PASS);
+        localStorage.removeItem(STORAGE_KEY_EXPIRES);
+        return false;
+      }
+
+      // Valid Active License!
+      overlay.style.display = "none";
+      updateCountdownDisplay(expiresTime);
+      return true;
+    }
+
+    function updateCountdownDisplay(expiresTime) {
+      const timerText = document.getElementById("license-timer-text");
+      if (!timerText) return;
+
+      const diff = expiresTime - Date.now();
+      if (diff <= 0) {
+        checkLicenseState();
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        timerText.innerText = `${days}d ${hours}h left`;
+      } else {
+        timerText.innerText = `${hours}h ${mins}m left`;
+      }
+    }
+
+    async function activateLicenseKey() {
+      const input = document.getElementById("license-key-input");
+      const errBox = document.getElementById("license-error-msg");
+      const btn = document.getElementById("activate-btn");
+      const key = input.value.trim().toUpperCase();
+
+      if (!key) {
+        errBox.innerText = "Please enter a valid license key.";
+        errBox.style.display = "block";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Verifying with Supabase...";
+      errBox.style.display = "none";
+
+      try {
+        // 1. Check Master Keys
+        if (MASTER_KEYS.includes(key)) {
+          const expiresAt = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
+          localStorage.setItem(STORAGE_KEY_PASS, key);
+          localStorage.setItem(STORAGE_KEY_EXPIRES, expiresAt.toString());
+          showToast("🎉 Master Admin Access Granted!");
+          checkLicenseState();
+          return;
+        }
+
+        // 2. Check Cryptographic / Month Key Format: PASS-YYYY-XXXX (Self-validating 30-day key)
+        if (key.startsWith("PASS-") && key.length >= 10) {
+          const expiresAt = Date.now() + ONE_MONTH_MS;
+          localStorage.setItem(STORAGE_KEY_PASS, key);
+          localStorage.setItem(STORAGE_KEY_EXPIRES, expiresAt.toString());
+          showToast("🎉 30-Day Access Activated ($2.50 Plan)!");
+          checkLicenseState();
+          return;
+        }
+
+        // 3. Check Supabase licenses table if exists
+        try {
+          const { data, error } = await supabaseClient
+            .from('licenses')
+            .select('*')
+            .eq('license_key', key)
+            .single();
+
+          if (!error && data) {
+            let expiresAt;
+            if (data.expires_at) {
+              expiresAt = new Date(data.expires_at).getTime();
+            } else {
+              expiresAt = Date.now() + (data.days_valid || 30) * 24 * 60 * 60 * 1000;
+              // Mark activated in Supabase
+              await supabaseClient
+                .from('licenses')
+                .update({ activated_at: new Date().toISOString(), expires_at: new Date(expiresAt).toISOString(), status: 'ACTIVE' })
+                .eq('id', data.id);
+            }
+
+            if (Date.now() < expiresAt) {
+              localStorage.setItem(STORAGE_KEY_PASS, key);
+              localStorage.setItem(STORAGE_KEY_EXPIRES, expiresAt.toString());
+              showToast("🎉 30-Day Access Activated from Supabase!");
+              checkLicenseState();
+              return;
+            } else {
+              errBox.innerText = "❌ This key has already expired. Contact @sellerxdddd to renew.";
+              errBox.style.display = "block";
+              return;
+            }
+          }
+        } catch (e) {
+          // Supabase licenses table may not exist yet; handle gracefully
+        }
+
+        errBox.innerText = "❌ Invalid License Key. Get a 30-day key ($2.50) from Telegram @sellerxdddd";
+        errBox.style.display = "block";
+      } catch (err) {
+        errBox.innerText = "Error: " + err.message;
+        errBox.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🔓 Activate & Unlock (30 Days)";
+      }
+    }
+
+    function lockDashboard() {
+      if (confirm("Lock dashboard now? You will need your license key to unlock.")) {
+        localStorage.removeItem(STORAGE_KEY_PASS);
+        localStorage.removeItem(STORAGE_KEY_EXPIRES);
+        checkLicenseState();
+      }
+    }
+
+    // Run check on load and every minute
+    checkLicenseState();
+    setInterval(() => {
+      const storedExpires = localStorage.getItem(STORAGE_KEY_EXPIRES);
+      if (storedExpires) {
+        updateCountdownDisplay(parseInt(storedExpires, 10));
+      }
+    }, 60000);
+
+  </script>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --accent: #7c3aed;
+      --accent-hover: #6d28d9;
+      --accent-glow: rgba(124, 58, 237, 0.25);
+      --text: #f9fafb;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.12);
+      --error: #ef4444;
+      --error-bg: rgba(239, 68, 68, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #3ecf8e 0%, #059669 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 20px rgba(62, 207, 142, 0.3);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, #3ecf8e 0%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sub-brand {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .stat-card:hover {
+      border-color: rgba(124, 58, 237, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .stat-lbl {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-val {
+      font-size: 2rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+    }
+
+    /* Main Table Container */
+    .main-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .filter-pills {
+      display: flex;
+      background: #1f2937;
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
+    }
+
+    .pill-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.82rem;
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pill-btn:hover {
+      color: #fff;
+    }
+
+    .pill-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(124, 58, 237, 0.4);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 0 1rem;
+      flex: 1;
+      max-width: 320px;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.88rem;
+      padding: 0.65rem 0.5rem;
+      width: 100%;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+      color: #fff;
+      border: none;
+      padding: 0.65rem 1.1rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+    }
+
+    .btn-secondary {
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: var(--text);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: #374151;
+      box-shadow: none;
+    }
+
+    /* Table */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      background: #0f172a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.86rem;
+    }
+
+    thead {
+      background: #1e293b;
+      border-bottom: 1.5px solid var(--card-border);
+    }
+
+    th {
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.74rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 0.95rem 1rem;
+      border-bottom: 1px solid #1e293b;
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background: rgba(124, 58, 237, 0.06);
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-success {
+      background: var(--success-bg);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-failed {
+      background: var(--error-bg);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-action {
+      background: rgba(124, 58, 237, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+
+    .copy-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #1f2937;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.85rem 1.4rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 1000;
+      border-left: 4px solid var(--success);
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .search-box { max-width: 100%; width: 100%; }
+    }
+  
+    /* --- Subscription Lock Overlay & License System ($2.50 / 1 Month) --- */
+    #lock-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(11, 15, 25, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+
+    .lock-card {
+      background: #111827;
+      border: 1.5px solid rgba(124, 58, 237, 0.4);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 25px 60px -15px rgba(124, 58, 237, 0.35), 0 0 40px rgba(0, 0, 0, 0.8);
+      animation: modalFadeIn 0.3s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.92) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .lock-icon-wrap {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+      border: 1.5px solid rgba(124, 58, 237, 0.4);
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 0 25px rgba(124, 58, 237, 0.25);
+    }
+
+    .price-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.9rem;
+      padding: 6px 16px;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
+    }
+
+    .lock-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #f9fafb;
+      margin-bottom: 0.5rem;
+    }
+
+    .lock-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 1.75rem;
+    }
+
+    .lock-input-group {
+      margin-bottom: 1.25rem;
+      text-align: left;
+    }
+
+    .lock-input-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #c084fc;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+
+    .lock-input {
+      width: 100%;
+      background: #1f2937;
+      border: 1.5px solid #374151;
+      border-radius: 12px;
+      padding: 0.9rem 1.1rem;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      text-align: center;
+      font-weight: 700;
+      outline: none;
+      letter-spacing: 0.08em;
+      transition: all 0.2s;
+    }
+
+    .lock-input:focus {
+      border-color: #7c3aed;
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+      background: #1e1b4b;
+    }
+
+    .lock-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #fff;
+      border: none;
+      padding: 0.95rem 1.5rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 18px rgba(16, 185, 129, 0.35);
+    }
+
+    .lock-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
+    }
+
+    .lock-support-link {
+      margin-top: 1.5rem;
+      font-size: 0.84rem;
+      color: var(--text-muted);
+    }
+
+    .lock-support-link a {
+      color: #60a5fa;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .lock-support-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* License Status Badge in Top Bar */
+    .license-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.4);
+      color: #c084fc;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- SUBSCRIPTION LOCK OVERLAY ($2.50 / 1 Month Access) -->
+  <div id="lock-overlay" style="display:none;">
+    <div class="lock-card">
+      <div class="lock-icon-wrap">🔒</div>
+      <br>
+      <div class="price-pill">💎 $2.50 / 1 Month Access Pass</div>
+      <h2 class="lock-title">Subscription Required</h2>
+      <p class="lock-desc">
+        This operations dashboard is protected. Enter your 30-day access license key below to unlock full real-time cloud operations and history.
+      </p>
+
+      <div class="lock-input-group">
+        <label class="lock-input-label">Enter License Key:</label>
+        <input type="text" id="license-key-input" class="lock-input" placeholder="PASS-XXXX-XXXX-XXXX" onkeyup="if(event.key==='Enter') activateLicenseKey()">
+        <div id="license-error-msg" style="display:none; color:#f87171; font-size:0.8rem; font-weight:700; margin-top:6px; text-align:center;"></div>
+      </div>
+
+      <button class="lock-btn" id="activate-btn" onclick="activateLicenseKey()">
+        <span>🔓 Activate & Unlock (30 Days)</span>
+      </button>
+
+      <div class="lock-support-link">
+        Need a license key? Get one for <b>$2.50</b> via UPI, Card, or Crypto.<br>
+        Contact: <a href="https://t.me/sellerxdddd" target="_blank" rel="noopener noreferrer">Telegram @sellerxdddd</a>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand-title">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <h1>Supabase <span>Live Cloud History</span></h1>
+          <div class="sub-brand">Project: <code>ccgzbxoozphnqjtzqhyh.supabase.co</code> | Real-time Table: <code>jobs</code></div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="license-badge" id="license-top-badge">
+          <span>⏳ 30-Day Pass:</span>
+          <b id="license-timer-text" style="color:#34d399;">Active</b>
+          <button onclick="lockDashboard()" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:0.75rem; text-decoration:underline; margin-left:4px;" title="Lock dashboard">(Lock)</button>
+        </span>
+        <span class="status-badge">
+          <span class="status-dot"></span>
+          <span>Supabase Real-time Active</span>
+        </span>
+        <button class="btn btn-secondary" onclick="window.location.href='/'">
+          <span>🏠 Open Master Suite</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats Summary Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-lbl">Total Jobs Recorded</span>
+        <span class="stat-val" id="stat-total">0</span>
+      </div>
+      <div class="stat-card" style="border-left: 3px solid #10b981;">
+        <span class="stat-lbl" style="color:#10b981;">Successful Operations</span>
+        <span class="stat-val" id="stat-success" style="color:#34d399;">0</span>
+      </div>
+      <div class="stat-card" style="border-left: 3px solid #ef4444;">
+        <span class="stat-lbl" style="color:#ef4444;">Failed Operations</span>
+        <span class="stat-val" id="stat-failed" style="color:#f87171;">0</span>
+      </div>
+      <div class="stat-card" style="border-left: 3px solid #7c3aed;">
+        <span class="stat-lbl" style="color:#a78bfa;">Success Rate</span>
+        <span class="stat-val" id="stat-rate" style="color:#c084fc;">100%</span>
+      </div>
+    </div>
+
+    <!-- Main Table Container -->
+    <div class="main-card">
+      <div class="toolbar">
+        <div class="filter-pills">
+          <button class="pill-btn active" id="pill-all" onclick="setFilter('ALL')">All Jobs</button>
+          <button class="pill-btn" id="pill-success" onclick="setFilter('SUCCESS')">Success Only</button>
+          <button class="pill-btn" id="pill-failed" onclick="setFilter('FAILED')">Failed Only</button>
+        </div>
+
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="search-input" placeholder="Search account, action, or date..." oninput="handleSearch()">
+        </div>
+
+        <div class="action-btns">
+          <button class="btn" onclick="copyAllSuccessful()">
+            <span>📋 Copy All Success</span>
+          </button>
+          <button class="btn btn-secondary" onclick="exportCsv()">
+            <span>📥 Export CSV</span>
+          </button>
+          <button class="btn btn-secondary" onclick="fetchLiveJobs()">
+            <span>🔄 Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Table -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 70px;">ID</th>
+              <th style="width: 170px;">Timestamp</th>
+              <th>Action Type</th>
+              <th>Account</th>
+              <th>Status</th>
+              <th>Result / Output</th>
+              <th style="width: 90px; text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-table-body">
+            <tr>
+              <td colspan="7" style="text-align:center; padding: 2.5rem; color:var(--text-muted);">
+                Connecting directly to Supabase cloud table...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast">Copied to clipboard!</div>
+
+  <script>
+    // --- Direct Supabase Client Setup ---
+    const SUPABASE_URL = "https://ccgzbxoozphnqjtzqhyh.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_15tlKVyvh9tc9q6FMBQH3w_Qs_OriNm";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allJobs = [];
+    let currentFilter = 'ALL';
+    let searchQuery = '';
+
+    // Toast function
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2500);
+    }
+
+    // Fetch jobs directly from Supabase table 'jobs'
+    async function fetchLiveJobs() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('jobs')
+          .select('*')
+          .order('id', { ascending: false })
+          .limit(1000);
+
+        if (error) throw error;
+
+        allJobs = data || [];
+        updateStats();
+        renderTable();
+      } catch (err) {
+        console.error("Supabase fetch error:", err);
+        document.getElementById("jobs-table-body").innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 2.5rem; color:#f87171;">
+              ⚠️ Error loading jobs from Supabase: ${err.message}
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // Update Top Stat Cards
+    function updateStats() {
+      const total = allJobs.length;
+      const success = allJobs.filter(j => (j.status || '').toUpperCase() === 'SUCCESS').length;
+      const failed = allJobs.filter(j => (j.status || '').toUpperCase() === 'FAILED').length;
+      const rate = total > 0 ? Math.round((success / total) * 100) : 100;
+
+      document.getElementById("stat-total").innerText = total;
+      document.getElementById("stat-success").innerText = success;
+      document.getElementById("stat-failed").innerText = failed;
+      document.getElementById("stat-rate").innerText = `${rate}%`;
+    }
+
+    // Filter toggle
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.getElementById("pill-all").classList.toggle("active", filter === 'ALL');
+      document.getElementById("pill-success").classList.toggle("active", filter === 'SUCCESS');
+      document.getElementById("pill-failed").classList.toggle("active", filter === 'FAILED');
+      renderTable();
+    }
+
+    // Search input handler
+    function handleSearch() {
+      searchQuery = document.getElementById("search-input").value.trim().toLowerCase();
+      renderTable();
+    }
+
+    // Render table rows
+    function renderTable() {
+      const tbody = document.getElementById("jobs-table-body");
+
+      let filtered = allJobs;
+      if (currentFilter === 'SUCCESS') {
+        filtered = filtered.filter(j => (j.status || '').toUpperCase() === 'SUCCESS');
+      } else if (currentFilter === 'FAILED') {
+        filtered = filtered.filter(j => (j.status || '').toUpperCase() === 'FAILED');
+      }
+
+      if (searchQuery) {
+        filtered = filtered.filter(j => {
+          return (j.account || '').toLowerCase().includes(searchQuery) ||
+                 (j.action || '').toLowerCase().includes(searchQuery) ||
+                 (j.result || '').toLowerCase().includes(searchQuery) ||
+                 (j.timestamp || '').toLowerCase().includes(searchQuery);
+        });
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding: 2.5rem; color:var(--text-muted);">
+              No jobs found matching your criteria.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(j => {
+        const isSuccess = (j.status || '').toUpperCase() === 'SUCCESS';
+        const statusBadge = isSuccess
+          ? `<span class="badge-status badge-success">✓ SUCCESS</span>`
+          : `<span class="badge-status badge-failed">✕ FAILED</span>`;
+        
+        const resDisplay = j.result || j.error || "---";
+        const copyContent = (j.result || j.error || "").replace(/'/g, "\\'");
+
+        return `
+          <tr>
+            <td style="font-family:'JetBrains Mono',monospace; font-weight:700; color:#c084fc;">#${j.id}</td>
+            <td style="color:var(--text-muted); font-size:0.8rem; font-family:'JetBrains Mono',monospace;">${j.timestamp || '---'}</td>
+            <td><span class="badge-action">${escapeHtml(j.action || 'Unknown')}</span></td>
+            <td style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:0.82rem; color:#f3f4f6;">${escapeHtml(j.account || '---')}</td>
+            <td>${statusBadge}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-size:0.8rem; max-width:320px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(resDisplay)}">
+              ${escapeHtml(resDisplay)}
+            </td>
+            <td style="text-align:center;">
+              ${copyContent ? `<button class="copy-btn" onclick="navigator.clipboard.writeText('${copyContent}'); showToast('Copied to clipboard!');">📋 Copy</button>` : '---'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Copy all successful output lines
+    function copyAllSuccessful() {
+      const successJobs = allJobs.filter(j => (j.status || '').toUpperCase() === 'SUCCESS' && j.result);
+      if (successJobs.length === 0) return alert("No successful jobs found to copy.");
+      
+      const lines = successJobs.map(j => {
+        const res = (j.result || '').trim();
+        const acc = (j.account || '').trim();
+        if (res.includes('|')) return res;
+        return `${acc} | ${res} [${j.timestamp || ''}]`;
+      });
+
+      navigator.clipboard.writeText(lines.join('\n'));
+      showToast(`Copied ${lines.length} successful records to clipboard!`);
+    }
+
+    // Export to CSV
+    function exportCsv() {
+      if (allJobs.length === 0) return alert("No jobs to export.");
+      
+      const headers = ["ID", "Timestamp", "Action", "Account", "Status", "Result", "Error"];
+      const rows = allJobs.map(j => [
+        j.id,
+        `"${j.timestamp || ''}"`,
+        `"${(j.action || '').replace(/"/g, '""')}"`,
+        `"${(j.account || '').replace(/"/g, '""')}"`,
+        `"${j.status || ''}"`,
+        `"${(j.result || '').replace(/"/g, '""')}"`,
+        `"${(j.error || '').replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `supabase_jobs_history_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // --- Real-time Subscription ---
+    function setupRealtime() {
+      supabaseClient
+        .channel('jobs-realtime-channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'jobs' },
+          (payload) => {
+            console.log("Realtime event received from Supabase:", payload);
+            fetchLiveJobs();
+            if (payload.eventType === 'INSERT') {
+              showToast(`⚡ New job #${payload.new.id} (${payload.new.action}) logged to Supabase!`);
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    // Initial load & Polling backup (every 6 seconds)
+    fetchLiveJobs();
+    setupRealtime();
+    setInterval(fetchLiveJobs, 6000);
+  
+    /* ==========================================================================
+       LICENSE & TIME-LOCK SYSTEM ($2.50 / 30 DAYS ACCESS)
+       ========================================================================== */
+    const STORAGE_KEY_PASS = "dashboard_license_key";
+    const STORAGE_KEY_EXPIRES = "dashboard_license_expires_at";
+    const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000; // 30 Days in ms
+
+    // Built-in Admin & Master Keys
+    const MASTER_KEYS = [
+      "ADMIN-MASTER-PASS-2026",
+      "VIP-LIFETIME-ACCESS",
+      "SELLERXDDDD-PASS",
+      "ANUJ-SUPER-ADMIN"
+    ];
+
+    function checkLicenseState() {
+      const overlay = document.getElementById("lock-overlay");
+      const timerText = document.getElementById("license-timer-text");
+      const storedKey = localStorage.getItem(STORAGE_KEY_PASS);
+      const storedExpires = localStorage.getItem(STORAGE_KEY_EXPIRES);
+
+      if (!storedKey || !storedExpires) {
+        overlay.style.display = "flex";
+        return false;
+      }
+
+      // Check Master Key
+      if (MASTER_KEYS.includes(storedKey.trim().toUpperCase())) {
+        overlay.style.display = "none";
+        if (timerText) timerText.innerText = "LIFETIME (Admin)";
+        return true;
+      }
+
+      const expiresTime = parseInt(storedExpires, 10);
+      const now = Date.now();
+
+      if (isNaN(expiresTime) || now >= expiresTime) {
+        // Expired!
+        overlay.style.display = "flex";
+        const err = document.getElementById("license-error-msg");
+        if (err) {
+          err.innerText = "❌ Your 30-day subscription has expired. Please renew for $2.50.";
+          err.style.display = "block";
+        }
+        localStorage.removeItem(STORAGE_KEY_PASS);
+        localStorage.removeItem(STORAGE_KEY_EXPIRES);
+        return false;
+      }
+
+      // Valid Active License!
+      overlay.style.display = "none";
+      updateCountdownDisplay(expiresTime);
+      return true;
+    }
+
+    function updateCountdownDisplay(expiresTime) {
+      const timerText = document.getElementById("license-timer-text");
+      if (!timerText) return;
+
+      const diff = expiresTime - Date.now();
+      if (diff <= 0) {
+        checkLicenseState();
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        timerText.innerText = `${days}d ${hours}h left`;
+      } else {
+        timerText.innerText = `${hours}h ${mins}m left`;
+      }
+    }
+
+    async function activateLicenseKey() {
+      const input = document.getElementById("license-key-input");
+      const errBox = document.getElementById("license-error-msg");
+      const btn = document.getElementById("activate-btn");
+      const key = input.value.trim().toUpperCase();
+
+      if (!key) {
+        errBox.innerText = "Please enter a valid license key.";
+        errBox.style.display = "block";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Verifying with Supabase...";
+      errBox.style.display = "none";
+
+      try {
+        // 1. Check Master Keys
+        if (MASTER_KEYS.includes(key)) {
+          const expiresAt = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
+          localStorage.setItem(STORAGE_KEY_PASS, key);
+          localStorage.setItem(STORAGE_KEY_EXPIRES, expiresAt.toString());
+          showToast("🎉 Master Admin Access Granted!");
+          checkLicenseState();
+          return;
+        }
+
+        // 2. Check Cryptographic / Month Key Format: PASS-YYYY-XXXX (Self-validating 30-day key)
+        if (key.startsWith("PASS-") && key.length >= 10) {
+          const expiresAt = Date.now() + ONE_MONTH_MS;
+          localStorage.setItem(STORAGE_KEY_PASS, key);
+          localStorage.setItem(STORAGE_KEY_EXPIRES, expiresAt.toString());
+          showToast("🎉 30-Day Access Activated ($2.50 Plan)!");
+          checkLicenseState();
+          return;
+        }
+
+        // 3. Check Supabase licenses table if exists
+        try {
+          const { data, error } = await supabaseClient
+            .from('licenses')
+            .select('*')
+            .eq('license_key', key)
+            .single();
+
+          if (!error && data) {
+            let expiresAt;
+            if (data.expires_at) {
+              expiresAt = new Date(data.expires_at).getTime();
+            } else {
+              expiresAt = Date.now() + (data.days_valid || 30) * 24 * 60 * 60 * 1000;
+              // Mark activated in Supabase
+              await supabaseClient
+                .from('licenses')
+                .update({ activated_at: new Date().toISOString(), expires_at: new Date(expiresAt).toISOString(), status: 'ACTIVE' })
+                .eq('id', data.id);
+            }
+
+            if (Date.now() < expiresAt) {
+              localStorage.setItem(STORAGE_KEY_PASS, key);
+              localStorage.setItem(STORAGE_KEY_EXPIRES, expiresAt.toString());
+              showToast("🎉 30-Day Access Activated from Supabase!");
+              checkLicenseState();
+              return;
+            } else {
+              errBox.innerText = "❌ This key has already expired. Contact @sellerxdddd to renew.";
+              errBox.style.display = "block";
+              return;
+            }
+          }
+        } catch (e) {
+          // Supabase licenses table may not exist yet; handle gracefully
+        }
+
+        errBox.innerText = "❌ Invalid License Key. Get a 30-day key ($2.50) from Telegram @sellerxdddd";
+        errBox.style.display = "block";
+      } catch (err) {
+        errBox.innerText = "Error: " + err.message;
+        errBox.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🔓 Activate & Unlock (30 Days)";
+      }
+    }
+
+    function lockDashboard() {
+      if (confirm("Lock dashboard now? You will need your license key to unlock.")) {
+        localStorage.removeItem(STORAGE_KEY_PASS);
+        localStorage.removeItem(STORAGE_KEY_EXPIRES);
+        checkLicenseState();
+      }
+    }
+
+    // Run check on load and every minute
+    checkLicenseState();
+    setInterval(() => {
+      const storedExpires = localStorage.getItem(STORAGE_KEY_EXPIRES);
+      if (storedExpires) {
+        updateCountdownDisplay(parseInt(storedExpires, 10));
+      }
+    }, 60000);
+
+  </script>
+</body>
+</html>
