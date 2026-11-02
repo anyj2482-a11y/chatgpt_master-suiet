@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Environment Secrets
+.env
+.env.local
+.env.*.local
+
+# Database & Data
+data/
+*.db
+*.sqlite3
+
+# Windows executables and staging
+cloudflared.exe
+*.bak*
+*_staging/
+
+# Browser profiles
+data/browser_session_profile/
+data/brave_session_profile/
+data/chrome_session_profile/

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+cloudflared.exe
+*.bat
+data/
+*.bak*
+test_doc_cookie.py
+.git
