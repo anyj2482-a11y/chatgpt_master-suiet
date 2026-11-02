@@ -7,6 +7,8 @@ load_dotenv()
 
 import asyncio
 import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -15,11 +17,12 @@ import sqlite3
 import sys
 import time
 import urllib.parse
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
@@ -91,6 +94,59 @@ elif IS_SUPABASE_REST:
 else:
     logger.info("Using local SQLite database backend (%s)", DB_PATH)
 
+# --- Owner-scoped job history ----------------------------------------------
+# Each signed-in visitor of the suite carries a signed owner token (issued by
+# the Lovable app). Jobs are stamped with that owner, and history endpoints
+# only ever return or act on the caller's own rows.
+HISTORY_TOKEN_SECRET = os.environ.get("HISTORY_TOKEN_SECRET", "").strip()
+_owner_ctx: ContextVar[str | None] = ContextVar("job_owner", default=None)
+
+
+def _b64u_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def _b64u_decode(data: str) -> bytes:
+    return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
+
+
+def verify_history_token(token: str | None) -> str | None:
+    """Return the stable owner id inside a signed token, or None."""
+    if not token or not HISTORY_TOKEN_SECRET:
+        return None
+    try:
+        uid_b64, sig = token.strip().split(".", 1)
+        uid = _b64u_decode(uid_b64).decode("utf-8")
+        expected = _b64u_encode(
+            hmac.new(
+                HISTORY_TOKEN_SECRET.encode("utf-8"),
+                uid_b64.encode("ascii"),
+                hashlib.sha256,
+            ).digest()
+        )
+        if uid and hmac.compare_digest(sig, expected):
+            return uid
+    except Exception:
+        return None
+    return None
+
+
+if not HISTORY_TOKEN_SECRET:
+    logger.warning(
+        "HISTORY_TOKEN_SECRET is not set: job history stays locked for everyone "
+        "until the owner adds this environment variable."
+    )
+
+
+@app.middleware("http")
+async def job_owner_middleware(request: Request, call_next):
+    token = request.headers.get("x-user-token") or request.query_params.get("u")
+    _owner_ctx.set(verify_history_token(token))
+    try:
+        return await call_next(request)
+    finally:
+        _owner_ctx.set(None)
+
 
 def init_db():
     if IS_DIRECT_POSTGRES:
@@ -113,6 +169,7 @@ def init_db():
                         CREATE INDEX IF NOT EXISTS idx_jobs_action ON jobs(action);
                         """
                     )
+                    cur.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS owner VARCHAR(128)")
                 conn.commit()
             logger.info("PostgreSQL database initialized successfully")
         except Exception as e:
@@ -138,13 +195,18 @@ def init_db():
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_timestamp ON jobs(timestamp);")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_action ON jobs(action);")
+            try:
+                conn.execute("ALTER TABLE jobs ADD COLUMN owner VARCHAR(128)")
+            except sqlite3.OperationalError:
+                pass  # column already exists
             conn.commit()
 
 
 init_db()
 
 
-def log_job(action: str, account: str, status: str, result: str = "", error: str = ""):
+def log_job(action: str, account: str, status: str, result: str = "", error: str = "", owner: str | None = None):
+    owner = owner or _owner_ctx.get()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # 1. Try Supabase REST if configured
     if IS_SUPABASE_REST:
@@ -156,14 +218,17 @@ def log_job(action: str, account: str, status: str, result: str = "", error: str
                 "Content-Type": "application/json",
                 "Prefer": "return=minimal"
             }
-            payload = json.dumps({
+            payload_dict = {
                 "timestamp": now,
                 "action": action,
                 "account": account or "Unknown Account",
                 "status": status,
                 "result": result or "",
                 "error": error or ""
-            }).encode("utf-8")
+            }
+            if owner:
+                payload_dict["owner"] = owner
+            payload = json.dumps(payload_dict).encode("utf-8")
             req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=5) as resp:
                 if resp.status in (200, 201):
@@ -177,8 +242,8 @@ def log_job(action: str, account: str, status: str, result: str = "", error: str
             with psycopg2.connect(DATABASE_URL) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "INSERT INTO jobs (timestamp, action, account, status, result, error) VALUES (%s, %s, %s, %s, %s, %s)",
-                        (now, action, account or "Unknown Account", status, result, error),
+                        "INSERT INTO jobs (timestamp, action, account, status, result, error, owner) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (now, action, account or "Unknown Account", status, result, error, owner),
                     )
                 conn.commit()
             return
@@ -189,21 +254,24 @@ def log_job(action: str, account: str, status: str, result: str = "", error: str
     try:
         with sqlite3.connect(DB_PATH) as conn:
             conn.execute(
-                "INSERT INTO jobs (timestamp, action, account, status, result, error) VALUES (?, ?, ?, ?, ?, ?)",
-                (now, action, account or "Unknown Account", status, result, error),
+                "INSERT INTO jobs (timestamp, action, account, status, result, error, owner) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (now, action, account or "Unknown Account", status, result, error, owner or ""),
             )
             conn.commit()
     except Exception as e:
         logger.error("Failed to log job to SQLite: %s", e)
 
 
-def get_jobs(limit: int = 500, status: str | None = None):
+def get_jobs(limit: int = 500, status: str | None = None, owner: str | None = None):
+    owner = owner or _owner_ctx.get()
     # 1. Try Supabase REST
     if IS_SUPABASE_REST:
         try:
             query = f"?select=*&order=id.desc&limit={limit}"
             if status:
                 query += f"&status=eq.{status.upper()}"
+            if owner:
+                query += f"&owner=eq.{urllib.parse.quote(owner)}"
             url = f"{SUPABASE_URL}/rest/v1/jobs{query}"
             headers = {
                 "apikey": SUPABASE_KEY,
@@ -223,10 +291,15 @@ def get_jobs(limit: int = 500, status: str | None = None):
         try:
             with psycopg2.connect(DATABASE_URL) as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    clauses, params = [], []
                     if status:
-                        cur.execute("SELECT * FROM jobs WHERE status = %s ORDER BY id DESC LIMIT %s", (status.upper(), limit))
-                    else:
-                        cur.execute("SELECT * FROM jobs ORDER BY id DESC LIMIT %s", (limit,))
+                        clauses.append("status = %s")
+                        params.append(status.upper())
+                    if owner:
+                        clauses.append("owner = %s")
+                        params.append(owner)
+                    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+                    cur.execute(f"SELECT * FROM jobs {where} ORDER BY id DESC LIMIT %s", (*params, limit))
                     return [dict(row) for row in cur.fetchall()]
         except Exception as e:
             logger.error("PostgreSQL get_jobs error: %s", e)
@@ -236,10 +309,15 @@ def get_jobs(limit: int = 500, status: str | None = None):
         with sqlite3.connect(DB_PATH) as conn:
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
+            clauses, params = [], []
             if status:
-                cur.execute("SELECT * FROM jobs WHERE status = ? ORDER BY id DESC LIMIT ?", (status.upper(), limit))
-            else:
-                cur.execute("SELECT * FROM jobs ORDER BY id DESC LIMIT ?", (limit,))
+                clauses.append("status = ?")
+                params.append(status.upper())
+            if owner:
+                clauses.append("owner = ?")
+                params.append(owner)
+            where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+            cur.execute(f"SELECT * FROM jobs {where} ORDER BY id DESC LIMIT ?", (*params, limit))
             return [dict(row) for row in cur.fetchall()]
     except Exception as e:
         logger.error("SQLite get_jobs error: %s", e)
@@ -704,7 +782,16 @@ async def launch_session_browser_endpoint(req: LaunchBrowserRequest):
 
 @app.get("/api/history")
 async def fetch_history(status: str | None = None):
-    jobs = get_jobs(limit=500, status=status)
+    owner = _owner_ctx.get()
+    if not owner:
+        return {
+            "ok": True,
+            "engine": "locked",
+            "authorized": False,
+            "jobs": [],
+            "stats": {"total": 0, "success": 0, "failed": 0},
+        }
+    jobs = get_jobs(limit=500, status=status, owner=owner)
     total, success_count, failed_count = 0, 0, 0
     try:
         if IS_SUPABASE_REST:
@@ -715,20 +802,20 @@ async def fetch_history(status: str | None = None):
         elif IS_DIRECT_POSTGRES:
             with psycopg2.connect(DATABASE_URL) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("SELECT COUNT(*) FROM jobs")
+                    cur.execute("SELECT COUNT(*) FROM jobs WHERE owner = %s", (owner,))
                     total = cur.fetchone()[0]
-                    cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'SUCCESS'")
+                    cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'SUCCESS' AND owner = %s", (owner,))
                     success_count = cur.fetchone()[0]
-                    cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'FAILED'")
+                    cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'FAILED' AND owner = %s", (owner,))
                     failed_count = cur.fetchone()[0]
         else:
             with sqlite3.connect(DB_PATH) as conn:
                 cur = conn.cursor()
-                cur.execute("SELECT COUNT(*) FROM jobs")
+                cur.execute("SELECT COUNT(*) FROM jobs WHERE owner = ?", (owner,))
                 total = cur.fetchone()[0]
-                cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'SUCCESS'")
+                cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'SUCCESS' AND owner = ?", (owner,))
                 success_count = cur.fetchone()[0]
-                cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'FAILED'")
+                cur.execute("SELECT COUNT(*) FROM jobs WHERE status = 'FAILED' AND owner = ?", (owner,))
                 failed_count = cur.fetchone()[0]
     except Exception as e:
         logger.error("Failed to fetch history stats: %s", e)
@@ -750,7 +837,10 @@ async def fetch_history(status: str | None = None):
 @app.get("/api/history/export")
 async def export_successful():
     """Export all successful job results in a clean text format."""
-    jobs = get_jobs(limit=10000, status="SUCCESS")
+    owner = _owner_ctx.get()
+    if not owner:
+        raise HTTPException(status_code=401, detail="Sign in to export your history.")
+    jobs = get_jobs(limit=10000, status="SUCCESS", owner=owner)
     lines = []
     for j in reversed(jobs):
         res = (j.get("result") or "").strip()
@@ -763,9 +853,12 @@ async def export_successful():
 
 @app.post("/api/history/clear")
 async def clear_history():
+    owner = _owner_ctx.get()
+    if not owner:
+        raise HTTPException(status_code=401, detail="Sign in to clear your history.")
     if IS_SUPABASE_REST:
         try:
-            url = f"{SUPABASE_URL}/rest/v1/jobs?id=gt.0"
+            url = f"{SUPABASE_URL}/rest/v1/jobs?owner=eq.{urllib.parse.quote(owner)}"
             headers = {
                 "apikey": SUPABASE_KEY,
                 "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -777,11 +870,11 @@ async def clear_history():
     elif IS_DIRECT_POSTGRES:
         with psycopg2.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM jobs")
+                cur.execute("DELETE FROM jobs WHERE owner = %s", (owner,))
             conn.commit()
     else:
         with sqlite3.connect(DB_PATH) as conn:
-            conn.execute("DELETE FROM jobs")
+            conn.execute("DELETE FROM jobs WHERE owner = ?", (owner,))
             conn.commit()
     return {"ok": True, "message": "History cleared"}
 

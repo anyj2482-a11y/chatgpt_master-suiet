@@ -1966,6 +1966,21 @@
   <div id="toast">Copied to clipboard!</div>
 
   <script>
+    /* Signed owner token from the host site — scopes job history to this visitor. */
+    const OWNER_TOKEN = new URLSearchParams(window.location.search).get("u") || "";
+    (function () {
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = function (input, init) {
+        if (OWNER_TOKEN) {
+          init = init || {};
+          const headers = new Headers(init.headers || (input && input.headers) || {});
+          if (!headers.has("x-user-token")) headers.set("x-user-token", OWNER_TOKEN);
+          init.headers = headers;
+        }
+        return nativeFetch(input, init);
+      };
+    })();
+
     let currentSetupSecret = "";
     let currentRotateSecret = "";
     let currentCredLine = "";
@@ -2409,7 +2424,10 @@
         }
 
         if (cachedJobs.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">No ${currentHistoryFilter !== "ALL" ? currentHistoryFilter.toLowerCase() : ""} jobs recorded yet.</td></tr>`;
+          const emptyMsg = data.authorized === false
+            ? "Sign in on the main site to see your job history."
+            : `No ${currentHistoryFilter !== "ALL" ? currentHistoryFilter.toLowerCase() : ""} jobs recorded yet.`;
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">${emptyMsg}</td></tr>`;
           return;
         }
 
@@ -2459,11 +2477,11 @@
     }
 
     function downloadSuccessfulFile() {
-      window.open("/api/history/export", "_blank");
+      window.open("/api/history/export" + (OWNER_TOKEN ? "?u=" + encodeURIComponent(OWNER_TOKEN) : ""), "_blank");
     }
 
     async function clearHistory() {
-      if (!confirm("Are you sure you want to clear all job history?")) return;
+      if (!confirm("Are you sure you want to clear YOUR job history? Other accounts are not affected.")) return;
       try {
         await fetch("/api/history/clear", { method: "POST" });
         loadHistory();
